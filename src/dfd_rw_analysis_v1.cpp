@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     std::string parseFilename;
     std::string results_name;
     std::string data_directory;
-    std::string home;
+    std::string data_home;
 
     std::vector<std::vector<std::string>> test_file;
     std::vector<std::pair<std::string, std::string>> image_files;
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
         ///////////////////////////////////////////////////////////////////////////////
         // Step 1: Read in the training images
         ///////////////////////////////////////////////////////////////////////////////
-        home = path_check(get_env_variable("HOME"));
+        data_home = path_check(get_env_variable("DATA_HOME"));
 
         parseFilename = argv[1];
         
@@ -193,18 +193,18 @@ int main(int argc, char** argv)
 
         // load the test data
 #if defined(_WIN32) | defined(__WIN32__) | defined(__WIN32) | defined(_WIN64) | defined(__WIN64)
-        parse_csv_file((home + "DFD" + test_inputfile), test_file);
-        data_directory = test_file[0][0];
+        parse_csv_file(test_inputfile, test_file);
+        data_directory = data_home + test_file[0][0];
 #else
         if (HPC == 1)
         {
-            parseCSVFile((home+"Projects"+test_inputfile), test_file);
-            data_directory = home + test_file[0][2];
+            parse_csv_file(test_inputfile, test_file);
+            data_directory = data_home + test_file[0][2];
         }
         else
         {
-            parseCSVFile((home+"DfD"+test_inputfile), test_file);
-            data_directory = home + test_file[0][1];
+            parse_csv_file(test_inputfile, test_file);
+            data_directory = data_home + test_file[0][1];
         }
 #endif
 
@@ -293,9 +293,6 @@ int main(int argc, char** argv)
 
         uint64_t count = 0;
 
-        std::cout << "Press Enter to begin..." << std::endl;
-        //std::cin.ignore();
-
         dlib::matrix<uint16_t> map;
         dlib::matrix<double,1,6> results = dlib::zeros_matrix<double>(1,6);
         
@@ -324,13 +321,11 @@ int main(int argc, char** argv)
             win2.set_image(mat_to_rgbjetmat(dlib::matrix_cast<float>(map), 0.0, 255.0));
             win2.set_title("DFD DNN Depthmap");
 
-
             std::string image_filename = output_save_location + "depthmap_image_" + results_name + num2str(idx, "_%05d") + ".png";
             
             std::cout << "------------------------------------------------------------------" << std::endl;
             std::cout << "Depthmap generation completed in: " << elapsed_time.count() << " seconds." << std::endl;
-            //std::cout << "Image Size (h x w): " << te[idx][0].nr() << " x " << te[idx][0].nc() << std::endl;
-            std::cout << "Image Size (h x w): " << crop_size.second*scale.second << " x " << crop_size.first*scale.first << std::endl;
+            std::cout << "Image Size (h x w): " << map.nr() << " x " << map.nc() << std::endl;
             std::cout << "Focus File:     " << image_files[idx].first << std::endl;
             std::cout << "Defocus File:   " << image_files[idx].second << std::endl;
             std::cout << "Depth Map File: " << image_filename << std::endl;
@@ -343,8 +338,7 @@ int main(int argc, char** argv)
 
             DataLogStream << "------------------------------------------------------------------" << std::endl;
             DataLogStream << "Depthmap generation completed in: " << elapsed_time.count() << " seconds." << std::endl;
-            //DataLogStream << "Image Size (h x w): " << te[idx][0].nr() << " x " << te[idx][0].nc() << std::endl;
-            DataLogStream << "Image Size (h x w): " << crop_size.second*scale.second << " x " << crop_size.first*scale.first << std::endl;
+            DataLogStream << "Image Size (h x w): " << map.nr() << " x " << map.nc() << std::endl;
             DataLogStream << "Focus File:     " << image_files[idx].first << std::endl;
             DataLogStream << "Defocus File:   " << image_files[idx].second << std::endl;
             DataLogStream << "Depth Map File: " << image_filename << std::endl;
@@ -357,7 +351,6 @@ int main(int argc, char** argv)
 
             // add code to save image
             dlib::save_png(dlib::matrix_cast<uint8_t>(map), image_filename);
-            //dlib::save_png(map, image_filename);
 
             nmae_accum += results(0, 0);
             nrmse_accum += results(0, 1);
@@ -390,8 +383,8 @@ int main(int argc, char** argv)
 
         //std::cout << "Average VIPF Val:  " << vipf_accum / (double)count << std::endl;
         std::cout << "------------------------------------------------------------------" << std::endl;
-        std::cout << "Average NMAE, NRMSE, SSIM, Var_GT, Var_DM: " << nmae_accum / (double)te.size() << ", " << nrmse_accum / (double)te.size() << ", " << ssim_accum / (double)te.size()
-            << ", " << var_gt_accum / (double)te.size() << ", " << var_dm_accum / (double)te.size() << std::endl;
+        std::cout << "Average NMAE, NRMSE, SSIM, SILOG,  Var_GT, Var_DM: " << nmae_accum / (double)te.size() << ", " << nrmse_accum / (double)te.size() << ", " << ssim_accum / (double)te.size()
+                  << ", " << silog_accum / (double)te.size() << ", " << var_gt_accum / (double)te.size() << ", " << var_dm_accum / (double)te.size() << std::endl;
         std::cout << std::endl;
 
         DataLogStream << "------------------------------------------------------------------" << std::endl;
@@ -406,7 +399,7 @@ int main(int argc, char** argv)
         // just save everything for easy copying
         DataLogStream << "------------------------------------------------------------------" << std::endl;
         DataLogStream << "Average NMAE, NRMSE, SSIM, Var_GT, Var_DM: " << nmae_accum / (double)te.size() << ", " << nrmse_accum / (double)te.size() << ", " << ssim_accum / (double)te.size()
-            << ", " << var_gt_accum / (double)te.size() << ", " << var_dm_accum / (double)te.size() << std::endl;
+                      << ", " << silog_accum / (double)te.size() << ", " << var_gt_accum / (double)te.size() << ", " << var_dm_accum / (double)te.size() << std::endl;
         DataLogStream << std::endl;
 
 
