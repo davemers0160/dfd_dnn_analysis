@@ -23,16 +23,9 @@
 #include "file_parser.h"
 #include "get_current_time.h"
 #include "num2string.h"
-//#include "gray_input.h"
-//#include "pixel_array_cropper.h"
-//#include "ssim.h"
-//#include "rgb2gray.h"
-//#include "cyclic_cropper.h"
-//#include "vifp_mscale.h"
-//#include "dfd_cyclic_analysis.h"
-#include "center_cropper.h"
-#include "gorgon_common.h"
-
+//#include "center_cropper.h"
+//#include "gorgon_common.h"
+#include "array_image_operations.h"
 
 // Net Version
 // Things must go in this order since the array size is determined
@@ -46,8 +39,12 @@
 #include <dlib/dnn.h>
 #include <dlib/image_io.h>
 #include <dlib/data_io.h>
-#include <dlib/gui_widgets.h>
 #include <dlib/image_transforms.h>
+
+// this is for enabling GUI support, i.e. opening windows
+#ifndef DLIB_NO_GUI_SUPPORT
+    #include <dlib/gui_widgets.h>
+#endif
 
 using namespace std;
 using namespace dlib;
@@ -232,7 +229,6 @@ int main(int argc, char** argv)
         DataLogStream << "Data Input File:      " << test_inputfile << std::endl;
         DataLogStream << "------------------------------------------------------------------" << std::endl;
 
-
         std::cout << "Test image sets to parse: " << test_file.size() << std::endl;
 
         DataLogStream << "Test image sets to parse: " << test_file.size() << std::endl;
@@ -280,10 +276,12 @@ int main(int argc, char** argv)
   
         std::cout << "Ready to analyze the network performance..." << std::endl;
         
+#ifndef DLIB_NO_GUI_SUPPORT
         dlib::image_window win0;
         dlib::image_window win1;
         dlib::image_window win2;
-        
+#endif
+
         double nmae_accum = 0.0;
         double nrmse_accum = 0.0;
         double ssim_accum = 0.0;
@@ -308,9 +306,13 @@ int main(int argc, char** argv)
             stop_time = chrono::system_clock::now();
 
             elapsed_time = chrono::duration_cast<d_sec>(stop_time - start_time);
-                
+
+#ifndef DLIB_NO_GUI_SUPPORT
+            dlib::matrix<dlib::rgb_pixel> rgb_img;
+            merge_channels(te[idx], rgb_img, 0);
+
             win0.clear_overlay();
-            win0.set_image(te[idx][0]);
+            win0.set_image(rgb_img);
             win0.set_title("Input Image");
             
             win1.clear_overlay();
@@ -320,6 +322,7 @@ int main(int argc, char** argv)
             win2.clear_overlay();
             win2.set_image(mat_to_rgbjetmat(dlib::matrix_cast<float>(map), 0.0, 255.0));
             win2.set_title("DFD DNN Depthmap");
+#endif
 
             std::string image_filename = output_save_location + "depthmap_image_" + results_name + num2str(idx, "_%05d") + ".png";
             
@@ -412,9 +415,11 @@ int main(int argc, char** argv)
 
         std::cin.ignore();
 
+#ifndef DLIB_NO_GUI_SUPPORT
         win0.close_window();
         win1.close_window();
         win2.close_window();
+#endif
 
     }
     catch (std::exception& e)
