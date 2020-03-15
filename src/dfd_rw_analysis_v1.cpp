@@ -23,6 +23,7 @@
 #include "file_parser.h"
 #include "get_current_time.h"
 #include "num2string.h"
+#include "dlib_jet_functions.h"
 //#include "center_cropper.h"
 //#include "gorgon_common.h"
 #include "array_image_operations.h"

@@ -13,7 +13,13 @@ extern const uint32_t secondary;
 
 // ----------------------------------------------------------------------------------------
 
-void parse_dfd_analysis_file(std::string parseFilename, std::string &data_file, std::string &net_name, std::string &results_name, std::string &save_location, std::pair<uint64_t, uint64_t> &crop_size, std::pair<uint32_t, uint32_t> &scale)
+void parse_dfd_analysis_file(std::string parseFilename, 
+    std::string &data_file, 
+    std::string &net_name, 
+    std::string &results_name, 
+    std::string &save_location, 
+    std::pair<uint64_t, uint64_t> &crop_size, 
+    std::pair<uint32_t, uint32_t> &scale)
 {
 
     std::vector<std::vector<std::string>> params;
