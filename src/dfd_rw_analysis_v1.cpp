@@ -18,8 +18,8 @@
 #include <utility>
 
 // Custom includes
-#include "dfd_dnn_analysis.h"
 #include "get_platform.h"
+#include "file_ops.h"
 #include "file_parser.h"
 #include "get_current_time.h"
 #include "num2string.h"
@@ -32,6 +32,7 @@
 // Things must go in this order since the array size is determined
 // by the network header file
 #include "dfd_net_v14.h"
+#include "dfd_dnn_analysis.h"
 #include "load_dfd_data.h"
 #include "eval_dfd_net_performance.h"
 
@@ -105,6 +106,7 @@ int main(int argc, char** argv)
 
     std::pair<uint64_t, uint64_t > crop_size(32, 32);
     std::pair<uint32_t, uint32_t> scale(1, 1);
+    uint16_t gt_min = 0, gt_max = 0;
 
     // these are the parameters to load in an image to make sure that it is the correct size
     // for the network.  The first number makes sure that the image is a modulus of the number
@@ -112,11 +114,6 @@ int main(int argc, char** argv)
     // structure (downsampling and upsampling tensor sizes).
     std::pair<uint32_t, uint32_t> mod_params(16, 0);  
     
-    //double nmae_error = 0.0;
-    //double nrmse_error = 0.0;
-    //double ssim_val = 0.0;
-    //double silog_error = 0.0;
-
     //////////////////////////////////////////////////////////////////////////////////
 
     if (argc == 1)
@@ -187,12 +184,14 @@ int main(int argc, char** argv)
             return 0;
         }
 
+        output_save_location = path_check(output_save_location);
         std::cout << "output_save_location:   " << output_save_location << std::endl;
 
         // load the test data
 #if defined(_WIN32) | defined(__WIN32__) | defined(__WIN32) | defined(_WIN64) | defined(__WIN64)
         parse_csv_file(test_inputfile, test_file);
-        data_directory = data_home + test_file[0][0];
+        //data_directory = data_home + test_file[0][0];
+        data_directory = test_file[0][0];
 #else
         if (HPC == 1)
         {
@@ -261,7 +260,7 @@ int main(int argc, char** argv)
         set_dnn_prefer_smallest_algorithms();
 
         dfd_net_type dfd_net;
-
+        
         std::cout << "Loading " << net_name << std::endl;
         deserialize(net_name) >> dfd_net;
 
@@ -308,6 +307,12 @@ int main(int argc, char** argv)
 
             elapsed_time = chrono::duration_cast<d_sec>(stop_time - start_time);
 
+            // get the maximum value for the depth map
+            dlib::find_min_and_max(gt_test[idx], gt_min, gt_max);
+
+            dlib::matrix<dlib::rgb_pixel> dm_img = mat_to_rgbjetmat(dlib::matrix_cast<float>(map), 0.0, (float)gt_max);
+            dlib::matrix<dlib::rgb_pixel> gt_img = mat_to_rgbjetmat(dlib::matrix_cast<float>(gt_test[idx]), 0.0, (float)gt_max);
+
 #ifndef DLIB_NO_GUI_SUPPORT
             dlib::matrix<dlib::rgb_pixel> rgb_img;
             merge_channels(te[idx], rgb_img, 0);
@@ -315,24 +320,28 @@ int main(int argc, char** argv)
             win0.clear_overlay();
             win0.set_image(rgb_img);
             win0.set_title("Input Image");
-            
+
+
             win1.clear_overlay();
-            win1.set_image(mat_to_rgbjetmat(dlib::matrix_cast<float>(gt_test[idx]), 0.0, 255.0));
+            win1.set_image(gt_img);
             win1.set_title("Groundtruth Depthmap");
 
             win2.clear_overlay();
-            win2.set_image(mat_to_rgbjetmat(dlib::matrix_cast<float>(map), 0.0, 255.0));
+            win2.set_image(dm_img);
             win2.set_title("DFD DNN Depthmap");
+            //std::cin.ignore();
+            dlib::sleep(300);
 #endif
 
-            std::string image_filename = output_save_location + "depthmap_image_" + results_name + num2str(idx, "_%05d") + ".png";
-            
+            std::string dm_filename = output_save_location + "depthmap_image_" + results_name + num2str(idx, "_%05d") + ".png";
+            std::string gt_filename = output_save_location + "gt_image_" + results_name + num2str(idx, "_%05d") + ".png";
+
             std::cout << "------------------------------------------------------------------" << std::endl;
             std::cout << "Depthmap generation completed in: " << elapsed_time.count() << " seconds." << std::endl;
             std::cout << "Image Size (h x w): " << map.nr() << " x " << map.nc() << std::endl;
             std::cout << "Focus File:     " << image_files[idx].first << std::endl;
             std::cout << "Defocus File:   " << image_files[idx].second << std::endl;
-            std::cout << "Depth Map File: " << image_filename << std::endl;
+            std::cout << "Depth Map File: " << dm_filename << std::endl;
             std::cout << "NMAE   " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 0) << std::endl;
             std::cout << "NRMSE  " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 1) << std::endl;
             std::cout << "SSIM   " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 2) << std::endl;
@@ -345,7 +354,7 @@ int main(int argc, char** argv)
             DataLogStream << "Image Size (h x w): " << map.nr() << " x " << map.nc() << std::endl;
             DataLogStream << "Focus File:     " << image_files[idx].first << std::endl;
             DataLogStream << "Defocus File:   " << image_files[idx].second << std::endl;
-            DataLogStream << "Depth Map File: " << image_filename << std::endl;
+            DataLogStream << "Depth Map File: " << dm_filename << std::endl;
             DataLogStream << "NMAE   " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 0) << std::endl;
             DataLogStream << "NRMSE  " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 1) << std::endl;
             DataLogStream << "SSIM   " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 2) << std::endl;
@@ -354,7 +363,8 @@ int main(int argc, char** argv)
             DataLogStream << "Var_DM " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 5) << std::endl;
 
             // add code to save image
-            dlib::save_png(dlib::matrix_cast<uint8_t>(map), image_filename);
+            dlib::save_png(dm_img, dm_filename);
+            dlib::save_png(gt_img, gt_filename);
 
             nmae_accum += results(0, 0);
             nrmse_accum += results(0, 1);
@@ -407,9 +417,9 @@ int main(int argc, char** argv)
         DataLogStream << std::endl;
 
 
-    #if defined(_WIN32) | defined(__WIN32__) | defined(__WIN32) | defined(_WIN64) | defined(__WIN64)
-        Beep(500, 1000);
-    #endif
+    //#if defined(_WIN32) | defined(__WIN32__) | defined(__WIN32) | defined(_WIN64) | defined(__WIN64)
+    //    Beep(500, 1000);
+    //#endif
 
         std::cout << "End of Program." << std::endl;
         DataLogStream.close();
