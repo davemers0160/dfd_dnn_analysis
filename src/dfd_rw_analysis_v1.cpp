@@ -27,6 +27,7 @@
 //#include "center_cropper.h"
 //#include "gorgon_common.h"
 #include "array_image_operations.h"
+#include "image_noise_functions.h"
 
 // Net Version
 // Things must go in this order since the array size is determined
@@ -35,7 +36,6 @@
 #include "dfd_dnn_analysis.h"
 #include "load_dfd_data.h"
 #include "eval_dfd_net_performance.h"
-
 
 // dlib includes
 #include <dlib/dnn.h>
@@ -76,7 +76,6 @@ void print_usage(void)
 }
 
 //-----------------------------------------------------------------------------
-
 int main(int argc, char** argv)
 {
     int idx;
@@ -297,9 +296,13 @@ int main(int argc, char** argv)
         // run through the network once.  This primes the GPU and stabilizes the timing
         // don't need the results.
         eval_net_performance(dfd_net, te[0], gt_test[0], map, crop_size, scale);
-      
+        dlib::rand rnd(time(NULL));
+
         for (idx = 0; idx < te.size(); ++idx)
         {
+
+            apply_poisson_noise(te[idx], 1.0, rnd, 0.0, 255.0);
+
             // time and analyze the results
             start_time = chrono::system_clock::now(); 
             results = eval_net_performance(dfd_net, te[idx], gt_test[idx], map, crop_size, scale);
