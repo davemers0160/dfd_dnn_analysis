@@ -301,7 +301,7 @@ int main(int argc, char** argv)
         for (idx = 0; idx < te.size(); ++idx)
         {
 
-            apply_poisson_noise(te[idx], 1.0, rnd, 0.0, 255.0);
+            apply_poisson_noise(te[idx], 3.0, rnd, 0.0, 255.0);
 
             // time and analyze the results
             start_time = chrono::system_clock::now(); 
