@@ -78,7 +78,7 @@ void print_usage(void)
 //-----------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-    int idx;
+    int idx, jdx;
 
     std::string sdate, stime;
 
@@ -300,8 +300,14 @@ int main(int argc, char** argv)
 
         for (idx = 0; idx < te.size(); ++idx)
         {
+            // add noise
+            apply_poisson_noise(te[idx], 0.0, rnd, 0.0, 255.0);
 
-            apply_poisson_noise(te[idx], 3.0, rnd, 0.0, 255.0);
+            // change lighting intensity
+            for (jdx = 0; jdx < te[idx].size(); ++jdx)
+            {
+                te[idx][jdx] = dlib::matrix_cast<uint16_t>(dlib::matrix_cast<double>(te[idx][jdx]) * 0.95);
+            }
 
             // time and analyze the results
             start_time = chrono::system_clock::now(); 
@@ -430,9 +436,15 @@ int main(int argc, char** argv)
         std::cin.ignore();
 
 #ifndef DLIB_NO_GUI_SUPPORT
-        win0.close_window();
-        win1.close_window();
-        win2.close_window();
+
+        if(!win0.is_closed())
+            win0.close_window();
+
+        if(!win1.is_closed())
+            win1.close_window();
+
+        if(!win2.is_closed())
+            win2.close_window();
 #endif
 
     }
