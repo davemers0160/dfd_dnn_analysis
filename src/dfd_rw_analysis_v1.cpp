@@ -298,10 +298,13 @@ int main(int argc, char** argv)
         eval_net_performance(dfd_net, te[0], gt_test[0], map, crop_size, scale);
         dlib::rand rnd(time(NULL));
 
+        // assume that the maximum depthmap value is the number of filters of the last layer - 1
+        gt_max = dlib::layer<1>(dfd_net).layer_details().num_filters() - 1;
+
         for (idx = 0; idx < te.size(); ++idx)
         {
             // add noise
-            apply_poisson_noise(te[idx], 0.0, rnd, 0.0, 255.0);
+            apply_poisson_noise(te[idx], 2.0, rnd, 0.0, 255.0);
 
             // change lighting intensity
             for (jdx = 0; jdx < te[idx].size(); ++jdx)
@@ -317,7 +320,7 @@ int main(int argc, char** argv)
             elapsed_time = chrono::duration_cast<d_sec>(stop_time - start_time);
 
             // get the maximum value for the depth map
-            dlib::find_min_and_max(gt_test[idx], gt_min, gt_max);
+            //dlib::find_min_and_max(gt_test[idx], gt_min, gt_max);
 
             dlib::matrix<dlib::rgb_pixel> dm_img = mat_to_rgbjetmat(dlib::matrix_cast<float>(map), 0.0, (float)gt_max);
             dlib::matrix<dlib::rgb_pixel> gt_img = mat_to_rgbjetmat(dlib::matrix_cast<float>(gt_test[idx]), 0.0, (float)gt_max);
@@ -343,6 +346,7 @@ int main(int argc, char** argv)
 #endif
 
             std::string dm_filename = output_save_location + "depthmap_image_" + results_name + num2str(idx, "_%05d") + ".png";
+            std::string dm_jet_filename = output_save_location + "depthmap_jet_" + results_name + num2str(idx, "_%05d") + ".png";
             std::string gt_filename = output_save_location + "gt_image_" + results_name + num2str(idx, "_%05d") + ".png";
 
             std::cout << "------------------------------------------------------------------" << std::endl;
@@ -372,7 +376,8 @@ int main(int argc, char** argv)
             DataLogStream << "Var_DM " << std::setw(5) << std::setfill('0') << idx << ": " << std::fixed << std::setprecision(5) << results(0, 5) << std::endl;
 
             // add code to save image
-            dlib::save_png(dm_img, dm_filename);
+            dlib::save_png(dm_img, dm_jet_filename);
+            dlib::save_png(dlib::matrix_cast<uint8_t>(map), dm_filename);
             dlib::save_png(gt_img, gt_filename);
 
             nmae_accum += results(0, 0);
