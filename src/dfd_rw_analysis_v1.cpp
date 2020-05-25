@@ -441,7 +441,7 @@ int main(int argc, char** argv)
     //    Beep(500, 1000);
     //#endif
 
-        std::cout << "End of Program." << std::endl;
+        std::cout << "End of Program.  Press Enter to close!" << std::endl;
         data_log_stream.close();
         dm_results_stream.close();
 
